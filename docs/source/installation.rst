@@ -32,7 +32,8 @@ table below:
 
 .. list-table::
     :header-rows: 1
-    :widths: 1 3
+    :widths: 1 2
+    :width: 100%
 
     *   - Name
         - Description
@@ -56,4 +57,4 @@ table below:
         - `Flask <https://palletsprojects.com/p/flask/>`__ as a :ref:`Layout Server`
 
     *   - ``all``
-        - All the features listed above (not usually needed)
+        - All of the above (not usually needed)

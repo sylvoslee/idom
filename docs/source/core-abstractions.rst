@@ -1,6 +1,7 @@
 Core Abstractions
 =================
 
+.. image:: _static/core-abstractions.svg
 
 Pure Components
 ---------------
