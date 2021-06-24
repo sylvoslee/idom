@@ -1,7 +1,40 @@
 Core Abstractions
 =================
 
+At a high level, IDOM is composed of 5 mains abstractions:
+
+.. list-table::
+    :header-rows: 1
+
+    *   - **Client**
+        - **Server**
+        - **Dispatcher**
+        - **Layout**
+        - **Component**
+
+    *   - Displays view updates and sends their events to the Server
+        - Sends view updates to the Client and forwards events to the Dispatcher
+        - Awaits events from the Server and view updates from the Layout
+        - Passes events to Component event handlers and renders Component view updates
+        - Defines the logic, structure, and event handlers for a given view
+
 .. image:: _static/core-abstractions.svg
+
+The diagram above shows how events (``e``)...
+
+1. Originate in the **Client**
+2. Are sent to the **Server** (usually via a WebSocket)
+3. Awaited upon by the **Dispatcher**
+4. Passed to the **Layout** and then a **Component**'s event handler
+5. In response, the **Component**'s handler tells the **Layout** to update it
+
+The **Layout** places the **Component** (``c``) into a render queue where it stays until
+a render is being awaited upon by the **Dispatcher**. Updates to the view are then
+produced by...
+
+1. Calls the **Component**'s render method to get its new VDOM (``v``)
+2. Which it compares with the existing view state to produce a VDOM-diff (``d``)
+
 
 Pure Components
 ---------------
