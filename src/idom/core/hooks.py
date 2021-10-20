@@ -86,7 +86,7 @@ class _CurrentState(Generic[_StateType]):
                 next_value = new(self.value)
             else:
                 next_value = new
-            if next_value is not self.value:
+            if not _is_identical(next_value, self.value):
                 self.value = next_value
                 hook.schedule_render()
 
@@ -291,7 +291,7 @@ def use_memo(
     elif (
         len(memo.args) != len(args)
         # if args are same length check identity for each item
-        or any(current is not new for current, new in zip(memo.args, args))
+        or any(not _is_identical(current, new) for current, new in zip(memo.args, args))
     ):
         memo.args = args
         changed = True
@@ -348,6 +348,19 @@ def use_ref(initial_value: _StateType) -> Ref[_StateType]:
 
 def _use_const(function: Callable[[], _StateType]) -> _StateType:
     return current_hook().use_state(function)
+
+
+def _is_identical(x: Any, y: Any):
+    return (
+        x is y
+        # We have to treat integers as a special case because CPython keeps an array of
+        # all integers between -5 and 256, so when you create an integer in that range
+        # you get the same object back. This messes the consistency of our identity
+        # check. So when comparing with an integer, we need to check equality instead of
+        # identity. The result is that equal integers are considered to be identical.
+        # For reference: https://docs.python.org/3/c-api/long.html#c.PyLong_FromLong
+        or (type(x) is int and x == y)
+    )
 
 
 _current_life_cycle_hook: Dict[int, "LifeCycleHook"] = {}

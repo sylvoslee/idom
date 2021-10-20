@@ -860,3 +860,73 @@ def test_bad_schedule_render_callback(caplog):
 
     first_log_line = next(iter(caplog.records)).msg.split("\n", 1)[0]
     assert re.match(f"Failed to schedule render via {bad_callback}", first_log_line)
+
+
+async def test_equal_integers_are_treated_as_identical_in_use_state():
+    # We need this because of how CPython deals with integer identity
+    # https://docs.python.org/3/c-api/long.html#c.PyLong_FromLong
+
+    set_count = idom.Ref()
+    render_count = idom.Ref(0)
+
+    @idom.component
+    def Counter():
+        render_count.current += 1
+        count, set_count.current = idom.hooks.use_state(0)
+        return idom.html.div(count)
+
+    with idom.Layout(Counter()) as layout:
+        await layout.render()
+        assert render_count.current == 1
+
+        set_count.current(1000)
+
+        await layout.render()
+        assert render_count.current == 2
+
+        # this is a different object, but we check equality of ints not identity
+        # so we do not expect this to trigger a render
+        set_count.current(1000)
+
+        with pytest.raises(asyncio.TimeoutError):
+            await asyncio.wait_for(layout.render(), timeout=1)
+        assert render_count.current == 2
+
+
+async def test_equal_integers_are_treated_as_identical_in_use_effect():
+    # We need this because of how CPython deals with integer identity
+    # https://docs.python.org/3/c-api/long.html#c.PyLong_FromLong
+
+    value = 0
+    component_hook = HookCatcher()
+    did_effect = asyncio.Event()
+
+    @idom.component
+    @component_hook.capture
+    def Counter():
+        @idom.hooks.use_effect(args=[value])
+        def some_effect():
+            did_effect.set()
+
+        return idom.html.div()
+
+    with idom.Layout(Counter()) as layout:
+        await layout.render()
+        await did_effect.wait()
+        did_effect.clear()
+
+        value = 1000
+        component_hook.latest.schedule_render()
+
+        await layout.render()
+        await did_effect.wait()
+        did_effect.clear()
+
+        # this is a different object, but we check equality of ints not identity
+        value = 1000
+        component_hook.latest.schedule_render()
+
+        await layout.render()
+
+        with pytest.raises(asyncio.TimeoutError):
+            await asyncio.wait_for(did_effect.wait(), timeout=1)
